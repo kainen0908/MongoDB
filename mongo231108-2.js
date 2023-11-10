@@ -5,6 +5,26 @@ db.companies.insertOne(
  "category_code" : "social",
  "founded_year" : 2004,
  "description" : "Social network",
+ "relationships":[
+   {
+     "is_past":false,
+     "title":"Founder and CEO, Board Of Directors",
+     "person":{
+       "first_name":"Mark",
+       "last_name":"Zuckerberg",
+       "permalink":"mark-zuckerberg"
+     }
+   },
+   {
+     "is_past":true,
+     "title":"CFO",
+     "person":{
+       "first_name":"David",
+       "last_name":"Ebersman",
+       "permalink":"david-ebersman"
+     }
+   }   
+ ], 
  "funding_rounds" : [{
  "id" : 4,
  "round_code" : "b",
@@ -80,6 +100,26 @@ db.companies.insertOne(
  "category_code" : "social",
  "founded_year" : 2004,
  "description" : "Social network",
+ "relationships":[
+   {
+     "is_past":false,
+     "title":"Founder and CEO, Board Of Directors",
+     "person":{
+       "first_name":"David",
+       "last_name":"Ebersman",
+       "permalink":"david-ebersman"
+     }
+   },
+   {
+     "is_past":true,
+     "title":"CFO",
+     "person":{
+       "first_name":"Robin",
+       "last_name":"Hood",
+       "permalink":"robin-hood"
+     }
+   }   
+ ], 
  "funding_rounds" : [{
  "id" : 4,
  "round_code" : "b",
@@ -131,7 +171,7 @@ db.companies.insertOne(
  ]
  }],
  "ipo" : {
- "valuation_amount" : NumberLong("104000000000"),
+ "valuation_amount" : NumberLong("100000000000"),
  "valuation_currency_code" : "USD",
  "pub_year" : 2012,
  "pub_month" : 5,
@@ -241,4 +281,102 @@ db.companies.aggregate(
     total_funding:{$sum:"$funding_rounds.raised_amount"}
   }}
 )
+db.getCollection("companies").find({})
+db.companies.aggregate([
+  {$group:{
+    _id:"$founded_year",
+    average_of_valuation_amount:{$avg:"$ipo.valuation_amount"}
+  }},
+  {$sort:{average_of_valueation_amount:-1}}
+])
+
+db.companies.aggregate([
+  {$match:{"relationships.person":{$ne:null}}},
+  {$project:{relationships:1, _id:0}},
+  {$unwind:"$relationships"},
+  {$group:{
+    _id:"$relationships.person",
+    count:{$sum:1}
+  }},
+    {$sort:{count:-1}}
+])
+
+db.companies.aggregate([
+  {$match:{founded_year:{$gte:2000}}},
+  {$group:{
+    _id:{founded_year:"$founded_year"},
+    companies:{$push:"$name"}
+  }},
+    {$sort:{"_id.founded_year":1}}
+])
+
+db.companies.aggregate([
+  {$match:{funding_rounds:{$ne:[]}}},
+  {$unwind:"$funding_rounds"},
+  {$sort:{
+    "funding_rounds.funded_year":1
+    }},
+  {$group:{
+    _id:{company:"$name"},
+    funding:{
+      $push:{
+        amount:"$funding_rounds.raised_amount",
+        year:"$funding_rounds.funded_year"
+      }
+    }
+  }}
+])
+
+db.companies.aggregate([
+  {$match:{funding_rounds:{$exists:true,$ne:[]}}},
+  {$unwind:"$funding_rounds"},
+  {$sort:{
+    "funding_rounds.funded_year":1
+    }},
+  {$group:{
+    _id:{company:"$name"},
+    first_round:{$first:"$funding_rounds"},
+    last_round:{$last:"$funding_rounds"},
+    num_rounds:{$sum:1},
+    total_raised:{$sum:"$funding_rounds.raised_amount"}
+  }},
+  {$project:{
+    _id:0,
+    company:"$_id.company",
+    first_round:{
+      amount:"$first_round.raised_amount",
+      year:"$first_round.funding_year"
+    },
+    last_round:{
+      amount:"$last_round.raised_amount",
+      year:"$last_round.funding_year"
+    },
+    num_rounds:1,
+    total_raised:1
+  }},
+  {$sort:{total_raised:-1}},
+  {$out:"abc"}
+])
+
+db.abc.find()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
